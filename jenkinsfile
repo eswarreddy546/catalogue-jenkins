@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         course = "DevOps321"
-        appversion =""
+        appversion = ""
     }
 
     options {
@@ -22,57 +22,47 @@ pipeline {
     stages {
 
         stage('Run nodejs') {
-    steps {
+            steps {
+                script {
+                    def packagejson = readJSON file: 'package.json'
+                    env.appversion = packagejson.version
+                    echo "appversion ${env.appversion}"
+                }
 
-        script {
-            def packagejson = readJSON file: 'package.json'
-            def appversion = packagejson.version
-            echo "appversion ${appversion}"
+                echo "Hello Build"
+                echo "${course}"
+            }
         }
-
-        echo "Hello Build"
-        echo "${course}"
-    }
-}
 
         stage('Install Dependencies') {
             steps {
-                script {
-                    sh """
-                    npm install
-                    """
-                }
-
-            }
-        }
-        stage('Docker build images') {
-    steps {
-        script {
-
-            sh """
-            /* docker build -t catalogue:${version} .
-            docker images */
-            
-
-            withAWS(region: 'us-east-1', credentials: 'aws credentials') {
-                sh "echo Logged into AWS"
-
-                aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 718311990774.dkr.ecr.us-east-1.amazonaws.com
-
-
-                docker build -t roboshop/catalogue .
-
-                docker images
-
-                docker push 718311990774.dkr.ecr.us-east-1.amazonaws.com/roboshop/catalogue:latest
-
-
+                sh """
+                npm install
                 """
             }
-
         }
-    }
-}
+
+        stage('Docker build images') {
+            steps {
+                script {
+
+                    withAWS(region: 'us-east-1', credentials: 'aws credentials') {
+
+                        sh """
+                        echo Logged into AWS
+
+                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 718311990774.dkr.ecr.us-east-1.amazonaws.com
+
+                        docker build -t roboshop/catalogue:${env.appversion} .
+
+                        docker images
+
+                        docker push 718311990774.dkr.ecr.us-east-1.amazonaws.com/roboshop/catalogue:${env.appversion}
+                        """
+
+                    }
+
+                }
             }
         }
 
