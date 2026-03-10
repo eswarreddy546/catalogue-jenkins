@@ -22,23 +22,18 @@ pipeline {
     stages {
 
         stage('Run nodejs') {
-            steps {
+    steps {
 
-             def packagejson = readJSON file: 'package.json'
-             appversion = packagejson.version
-             echo "appversion ${appversion}"
-
-
-                
-                echo "Hello Build"
-                echo "${course}"
-
-                
-
-                
-            
-            }
+        script {
+            def packagejson = readJSON file: 'package.json'
+            def appversion = packagejson.version
+            echo "appversion ${appversion}"
         }
+
+        echo "Hello Build"
+        echo "${course}"
+    }
+}
 
         stage('Test') {
             steps {
