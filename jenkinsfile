@@ -34,6 +34,16 @@ pipeline {
             }
         }
 
+        stage('testing') {
+            steps {
+                sh '''
+                npm test
+
+                echo "testing is completd"
+                '''
+            }
+        }
+
         stage('Docker Build & Push') {
             steps {
                 script {
