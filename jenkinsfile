@@ -46,14 +46,33 @@ pipeline {
             }
         }
         stage('Docker build images') {
-            steps {
-                script {
-                    sh """
-                    docker build -t catalogue.${version}.
-                    docker images
-                    """
-                }
+    steps {
+        script {
 
+            sh """
+            /* docker build -t catalogue:${version} .
+            docker images */
+            
+
+            withAWS(region: 'us-east-1', credentials: 'aws credentials') {
+                sh "echo Logged into AWS"
+
+                aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 718311990774.dkr.ecr.us-east-1.amazonaws.com
+
+
+                docker build -t roboshop/catalogue .
+
+                docker images
+
+                docker push 718311990774.dkr.ecr.us-east-1.amazonaws.com/roboshop/catalogue:latest
+
+
+                """
+            }
+
+        }
+    }
+}
             }
         }
 
