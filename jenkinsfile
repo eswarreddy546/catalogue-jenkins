@@ -45,6 +45,17 @@ pipeline {
 
             }
         }
+        stage('Docker build images') {
+            steps {
+                script {
+                    sh """
+                    docker build -t catalogue.${version}.
+                    docker images
+                    """
+                }
+
+            }
+        }
 
         stage('Deploy') {
             steps {
