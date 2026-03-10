@@ -4,29 +4,21 @@ pipeline {
     environment {
         course = "DevOps321"
         appversion = ""
-    }
-
-    /* options {
-        timeout(time: 50, unit: 'SECONDS')
-        disableRestartFromStage()
-    } */
-
-    parameters {
-        string(name: 'PERSON', defaultValue: 'Mr Jenkins', description: 'Who should I say hello to?')
-        text(name: 'BIOGRAPHY', defaultValue: '', description: 'Enter some information about the person')
-        booleanParam(name: 'TOGGLE', defaultValue: true, description: 'Toggle this value')
-        choice(name: 'CHOICE', choices: ['One', 'Two', 'Three'], description: 'Pick something')
-        password(name: 'PASSWORD', defaultValue: 'SECRET', description: 'Enter a password')
+        AWS_ACCOUNT = "718311990774"
+        AWS_REGION = "us-east-1"
+        REPO = "roboshop/catalogue"
     }
 
     stages {
 
-        stage('Run nodejs') {
+        stage('Read Version') {
             steps {
                 script {
                     def packagejson = readJSON file: 'package.json'
-                    env.appversion = packagejson.version
-                    echo "appversion ${env.appversion}"
+
+                    env.appversion = packagejson.version ?: "1.0.0"
+
+                    echo "Application Version: ${env.appversion}"
                 }
 
                 echo "Hello Build"
@@ -36,50 +28,48 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh """
+                sh '''
                 npm install
-                """
+                '''
             }
         }
 
-        stage('Docker build images') {
+        stage('Docker Build & Push') {
             steps {
                 script {
 
-                    withAWS(region: 'us-east-1', credentials: 'aws credentials') {
+                    withAWS(region: "${AWS_REGION}", credentials: 'aws credentials') {
 
                         sh """
-                        echo Logged into AWS
+                        echo "Login to AWS ECR"
 
-                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 718311990774.dkr.ecr.us-east-1.amazonaws.com
+                        aws ecr get-login-password --region ${AWS_REGION} | \
+                        docker login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
-                        docker build -t roboshop/catalogue:${env.appversion} .
+                        echo "Building Docker Image"
+
+                        docker build -t ${REPO}:${env.appversion} .
+
+                        docker tag ${REPO}:${env.appversion} \
+                        ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${REPO}:${env.appversion}
+
+                        echo "Pushing Docker Image"
+
+                        docker push ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${REPO}:${env.appversion}
 
                         docker images
-
-                        docker push 718311990774.dkr.ecr.us-east-1.amazonaws.com/roboshop/catalogue:${env.appversion}
                         """
-
                     }
-
                 }
             }
         }
 
         stage('Deploy') {
             steps {
-
-                input message: "Should we continue?",
-                      ok: "Yes, we should.",
-                      submitter: "alice,bob",
-                      parameters: [
-                        string(name: 'PERSON', defaultValue: 'Mr Jenkins', description: 'Who should I say hello to?')
-                      ]
-
-                sh """
+                sh '''
                 echo "Hello Deploy"
                 echo "${course}"
-                """
+                '''
             }
         }
 
@@ -92,15 +82,15 @@ pipeline {
         }
 
         success {
-            echo 'I will run if success'
+            echo 'Pipeline completed successfully'
         }
 
         failure {
-            echo 'I will run if failure'
+            echo 'Pipeline failed'
         }
 
         aborted {
-            echo 'pipeline is aborted'
+            echo 'Pipeline was aborted'
         }
     }
 }
