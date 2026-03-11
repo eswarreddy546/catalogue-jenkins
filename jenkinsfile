@@ -7,6 +7,7 @@ pipeline {
         AWS_ACCOUNT = "718311990774"
         AWS_REGION = "us-east-1"
         REPO = "roboshop/catalogue"
+        SONARQUBE_ENV = "sonarqube"
     }
 
     stages {
@@ -15,9 +16,7 @@ pipeline {
             steps {
                 script {
                     def packagejson = readJSON file: 'package.json'
-
                     env.appversion = packagejson.version ?: "1.0.0"
-
                     echo "Application Version: ${env.appversion}"
                 }
 
@@ -34,13 +33,28 @@ pipeline {
             }
         }
 
-        stage('testing') {
+        stage('Testing') {
             steps {
                 sh '''
                 npm test
-
-                echo "testing is completd"
+                echo "Testing completed"
                 '''
+            }
+        }
+
+        stage('SonarQube Scan') {
+            steps {
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+                    withSonarQubeEnv("${SONARQUBE_ENV}") {
+                        sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                        -Dsonar.projectKey=catalogue \
+                        -Dsonar.projectName=catalogue \
+                        -Dsonar.sources=.
+                        """
+                    }
+                }
             }
         }
 
